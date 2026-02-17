@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Twoo Projects</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        .admin-actions-grid {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 1100px;
+            align-items: stretch;
+        }
+
+        .admin-card {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 25px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .admin-card-header h3 {
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+        }
+
+        .admin-card-header p {
+            margin: 5px 0 0 0;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .admin-control-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .admin-input-styled {
+            flex: 1;
+            height: 45px;
+            background: #0f0f0f !important;
+            border: 1px solid #333 !important;
+            border-radius: 8px !important;
+            padding: 0 15px !important;
+            color: white !important;
+            font-size: 14px !important;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .admin-input-styled:focus {
+            border-color: var(--accent) !important;
+        }
+
+        .btn-admin-action {
+            height: 45px;
+            padding: 0 25px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 800;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-admin-action:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.2);
+        }
+
+        #btnSaveCloud {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+            display: none; 
+        }
+        #btnSaveCloud:hover {
+            background: #0056b3;
+        }
+
+        .task-modal-content {
+            width: 500px !important;
+            padding: 30px !important;
+        }
+        .task-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 15px;
+            display: block;
+            margin-bottom: 5px;
+        }
+        #taskDescInput {
+            height: 100px;
+            resize: none;
+            padding: 12px;
+            line-height: 1.5;
+        }
+
+        #audit-modal {
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent) #111;
+        }
+    </style>
+</head>
+<body>
+    <div id="global-announcement" style="display:none; background: gold; color: black; padding: 10px; text-align: center; font-weight: bold; position: fixed; top: 35px; width: 100%; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+        <span id="announcement-text"></span>
+        <button onclick="closeAnnouncement()" style="margin-left: 20px; border: 1px solid black; background: transparent; cursor: pointer; border-radius: 4px; padding: 2px 8px; font-weight: bold;">✕</button>
+    </div>
+
+    <div class="titlebar-drag">
+        <div class="titlebar-name" id="app-title">Twoo Projects</div>
+    </div>
+
+    <div id="username-screen">
+        <div class="license-wrapper">
+            <h1 class="license-title">Bienvenido</h1>
+            <p class="license-subtitle">Para empezar, elige tu nombre de usuario.</p>
+            <div class="license-input-container">
+                <input type="text" id="usernameInput" class="license-input" placeholder="Tu Nickname">
+                <button id="btnSetUsername" class="action-btn">Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="license-screen">
+        <div class="license-wrapper">
+            <h1 style="color: var(--accent); margin-bottom: 10px; font-size: 2.5rem;">Validación</h1>
+            <p style="color: var(--text-dim); font-size: 14px; margin-bottom: 30px;">Introduce tu código de invitación o licencia.</p>
+            <div class="license-input-container">
+                <input type="text" id="licenseInput" class="license-input" placeholder="XXXX-XXXX-XXXX">
+                <button id="btnActivate" class="action-btn">Entrar</button>
+            </div>
+            <p id="licenseError" style="color: #ff4b4b; display: none; margin-top: 15px; font-weight: bold;"></p>
+        </div>
+    </div>
+
+    <div id="org-name-modal">
+        <div class="modal-content">
+            <h2 style="color: var(--accent);">Nueva Organización</h2>
+            <p style="color: #ccc; margin-bottom: 20px;">Estás activando una licencia de Administrador.<br>Ponle nombre a tu empresa o equipo.</p>
+            <input type="text" id="orgNameInput" class="license-input" placeholder="Ej: Twoo Studio" style="width: 100%; border-radius: 8px; margin-bottom: 20px;">
+            <button id="btnCreateOrg" class="action-btn" style="width: 100%; border-radius: 8px;">Crear Organización</button>
+        </div>
+    </div>
+
+    <div id="task-modal">
+        <div class="task-modal-content">
+            <h3 style="color: var(--accent); margin-top: 0;">Gestión de Tarea</h3>
+            <span class="task-label">Título de la Tarea</span>
+            <input type="text" id="taskTitleInput" class="task-input" placeholder="Ej: Corregir errores de red">
+            <span class="task-label">Descripción del objetivo</span>
+            <textarea id="taskDescInput" class="task-input" placeholder="Describe detalladamente qué se debe hacer..."></textarea>
+            <span class="task-label">Asignar Miembros (Separados por coma)</span>
+            <input type="text" id="taskAssignedInput" class="task-input" placeholder="ej: ElFoTwoo, Usuario123">
+            <div style="display: flex; justify-content: flex-end; margin-top: 25px; gap: 10px;">
+                <button id="btnCancelTask" class="btn-cancel">Cancelar</button>
+                <button id="btnConfirmTask" class="action-btn" style="padding: 10px 20px; font-size: 14px; border-radius: 6px;">Crear Tarea</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-orgs-modal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:30000; align-items:center; justify-content:center; backdrop-filter:blur(10px);">
+        <div class="modal-content" style="width:650px; max-height:80vh; overflow-y:auto; border: 1px solid #444; background: #000; padding: 40px; border-radius: 20px;">
+            <h2 style="color: white; margin-top:0;">🌐 Gestión Global de Organizaciones</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 25px;">Inspecciona archivos de equipo, únete a organizaciones o elimínalas del sistema.</p>
+            <div id="admin-org-list" style="margin-top:20px; text-align:left; display: flex; flex-direction: column; gap: 12px;"></div>
+            <button class="btn-table" style="margin-top:25px; width:100%; height: 45px; border-color: #333; color: #666;" onclick="document.getElementById('admin-orgs-modal').style.display='none'">Cerrar Panel Maestro</button>
+        </div>
+    </div>
+
+    <div id="welcome-screen">
+        <nav>
+            <div class="nav-left">
+                <div class="nav-tabs">
+                    <button class="tab-btn active" onclick="switchTab('editor')">Editor</button>
+                    <button class="tab-btn" onclick="switchTab('files')">Archivos</button>
+                    <button class="tab-btn" onclick="switchTab('tasks')">Tareas</button>
+                    <button class="tab-btn" id="tabGestion" onclick="switchTab('gestion')" style="display: none;">Gestión</button>
+                    <button class="tab-btn" id="tabAdminApp" onclick="switchTab('adminapp')" style="display: none; border: 1px solid gold; color: gold; font-weight: bold;">👑 Admin</button>
+                </div>
+            </div>
+            <div class="nav-right">
+                 <span id="userInfoDisplay" style="font-size: 12px; color: #666; margin-right: 10px;">Cargando...</span>
+                 <button id="btnSettings" style="background: transparent; border: 1px solid #333; color: #888; border-radius: 4px; padding: 4px 8px; cursor: pointer;">⚙</button>
+            </div>
+        </nav>
+
+        <div class="main-content-area">
+            <div id="editor-container" class="tab-content">
+                <div class="toolbar-container">
+                    <div class="view-selector">
+                        <select id="viewMode">
+                            <option value="doc">📄 Google Doc</option>
+                            <option value="note">📝 Bloc de notas</option>
+                            <option value="code">💻 VS Code</option>
+                        </select>
+                    </div>
+                    <div class="sep"></div>
+                    <div class="editor-toolbar">
+                        <button onclick="format('bold')" title="Negrita"><b>B</b></button>
+                        <button onclick="format('italic')" title="Cursiva"><i>I</i></button>
+                        <button onclick="format('underline')" title="Subrayado"><u>U</u></button>
+                        <div class="sep"></div>
+                        <button onclick="format('justifyLeft')">⬅</button>
+                        <button onclick="format('justifyCenter')">▲</button>
+                        <button onclick="format('justifyRight')">➡</button>
+                    </div>
+                    <div style="flex: 1;"></div>
+                    <button id="btnSaveCloud">Guardar en la Nube</button>
+                    <button id="btnSaveDirect">Guardar</button>
+                    <button id="btnSaveAs" style="background: transparent; border: 1px solid #333; color: #ccc;">Guardar como...</button>
+                </div>
+                <div id="editor" contenteditable="true" spellcheck="false"></div>
+            </div>
+
+            <div id="files-container" class="tab-content" style="display: none; padding: 40px; color: var(--text-main);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h2 style="color: var(--accent); margin: 0;">Archivos de Equipo</h2>
+                        <p style="color: #666; margin: 5px 0 0 0; font-size: 13px;">Organización: <span id="orgNameDisplayFiles">...</span></p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="nav-tabs" style="background: #111; padding: 4px; border-radius: 8px; border: 1px solid #222;">
+                            <button class="tab-btn active" id="btnVerArchivos" onclick="toggleTrash(false)" style="font-size: 11px;">📂 Activos</button>
+                            <button class="tab-btn" id="btnVerPapelera" onclick="toggleTrash(true)" style="font-size: 11px;">🗑️ Papelera</button>
+                        </div>
+                        <input type="file" id="fileUploadInput" accept=".txt, .twoo" style="display: none;">
+                        <button id="btnUploadFile" class="upload-btn" style="margin-right: 0;">
+                            <span style="font-size: 18px; margin-right: 8px;">☁️</span> Subir
+                        </button>
+                    </div>
+                </div>
+                <div id="cloudFileList" class="file-grid"></div>
+            </div>
+
+            <div id="tasks-container" class="tab-content" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 10px 20px;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <h2 style="margin: 0;">Tablero de Trabajo</h2>
+                        <button id="btnRefreshTasks" class="refresh-btn" title="Refrescar tablero">🔄</button>
+                    </div>
+                    <button id="btnAddTask" style="background: var(--accent); color: black; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer;">+ Nueva Tarea</button>
+                </div>
+                <div class="kanban-board">
+                    <div class="kanban-col">
+                        <h3 style="border-bottom: 2px solid #ff4b4b; padding-bottom: 10px; color: #ff4b4b;">Pendiente</h3>
+                        <div id="col-pending" class="task-list"></div>
+                    </div>
+                    <div class="kanban-col">
+                        <h3 style="border-bottom: 2px solid #ffa500; padding-bottom: 10px; color: #ffa500;">En Curso</h3>
+                        <div id="col-progress" class="task-list"></div>
+                    </div>
+                    <div class="kanban-col">
+                        <h3 style="border-bottom: 2px solid #00ff41; padding-bottom: 10px; color: #00ff41;">Terminado</h3>
+                        <div id="col-done" class="task-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="gestion-container" class="tab-content" style="display: none;">
+                <div class="gestion-header">
+                    <h2 style="margin: 0; font-size: 28px;">Panel de Gestión</h2>
+                    <p style="color: #666; margin: 5px 0 0 0;">Administra tu organización: <span id="orgNameDisplayAdmin" style="color: var(--accent); font-weight: bold;">...</span></p>
+                </div>
+                <button id="btnSuperAdminOrgs" class="action-btn" style="display:none; margin-bottom:20px; background:white; color:black; border-radius:8px; width: fit-content; padding: 10px 25px; font-weight: 800;">
+                    ⚡ Seleccionar Organización
+                </button>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Usuarios Totales</span>
+                        <span class="stat-value" id="stat-total-users">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">En Línea</span>
+                        <span class="stat-value" id="stat-online-users" style="color: #00ff41;">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Archivos Cloud</span>
+                        <span class="stat-value" id="stat-total-files">0</span>
+                    </div>
+                </div>
+                <div class="invite-section">
+                    <div class="invite-info">
+                        <h3>Código de Invitación</h3>
+                        <p>Usa este código para añadir nuevos miembros a tu equipo.</p>
+                    </div>
+                    <div class="invite-box">
+                        <div id="inviteCodeDisplay" class="invite-code-display">Cargando...</div>
+                        <button class="action-btn" style="border-radius: 8px; padding: 0 20px;" onclick="navigator.clipboard.writeText(document.getElementById('inviteCodeDisplay').innerText)">Copiar</button>
+                    </div>
+                </div>
+                <div class="users-table-container">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Rango / Rol</th>
+                                <th>Estado</th>
+                                <th style="text-align: right; padding-right: 25px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="adminapp-container" class="tab-content" style="display: none; padding: 40px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <div class="gestion-header" style="margin-bottom: 0;">
+                        <h2 style="color: gold; margin: 0; font-size: 28px;">Control Maestro</h2>
+                        <p style="color: #666; margin: 5px 0 0 0;">Gestión Global de Aplicación y Facturación</p>
+                    </div>
+                    <button class="btn-admin-action" style="background: #007bff; color: white; text-transform: none; font-size: 13px;" onclick="abrirPanelMaestroOrgs()">📂 Gestionar Orgs (Auditoría)</button>
+                </div>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 25px; width: 100%; max-width: 1100px;">
+                    <div class="stat-card"><span class="stat-label">Usuarios Globales</span><span class="stat-value" id="admin-total-users">0</span></div>
+                    <div class="stat-card"><span class="stat-label">Organizaciones</span><span class="stat-value" id="admin-total-orgs">0</span></div>
+                    <div class="stat-card"><span class="stat-label">Licencias Libres</span><span class="stat-value" id="admin-unused-licenses">0</span></div>
+                    <div class="stat-card" style="border: 1px solid gold;"><span class="stat-label" style="color: gold;">Rango Actual</span><span class="stat-value" style="font-size: 16px;">👑 ADMINAPP</span></div>
+                </div>
+
+                <div class="admin-actions-grid">
+                    <div class="admin-card" style="border-color: rgba(255, 215, 0, 0.2);">
+                        <div class="admin-card-header">
+                            <h3 style="color: gold;">Generar Licencia</h3>
+                            <p>Crea nuevos accesos para el sistema.</p>
+                        </div>
+                        <div class="admin-control-group">
+                            <select id="newLicenseType" class="admin-input-styled">
+                                <option value="DEFAULT_LICENSE">Cliente Default</option>
+                                <option value="NEW_ORG_LICENSE">Nueva Organización</option>
+                                <option value="ADMINAPP">Acceso Master ADMINAPP</option>
+                            </select>
+                            <button class="btn-admin-action" style="background: gold; color: black;" onclick="generarLicenciaMaster()">Generar</button>
+                        </div>
+                    </div>
+
+                    <div class="admin-card" style="border-color: rgba(255, 75, 75, 0.2);">
+                        <div class="admin-card-header">
+                            <h3 style="color: #ff4b4b;">Broadcast Global</h3>
+                            <p>Notificación con sonido para todos.</p>
+                        </div>
+                        <div class="admin-control-group">
+                            <input type="text" id="broadcastInput" class="admin-input-styled" placeholder="Escribe un mensaje...">
+                            <button class="btn-admin-action" style="background: #ff4b4b; color: white;" onclick="enviarBroadcast()">Enviar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; max-width: 1100px;">
+                    <h3 style="color: gold; margin: 0;">Inventario de Licencias Globales</h3>
+                    <input type="text" id="searchAdminLicenses" class="task-input" placeholder="🔍 Buscar código..." style="width: 250px; margin: 0; padding: 8px 15px; background: #111; font-size: 13px;">
+                </div>
+                <div class="users-table-container" style="width: 100%; max-width: 1100px;">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th style="text-align: right; padding-right: 25px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminGlobalLicensesBody"></tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; margin-top: 40px; width: 100%; max-width: 1100px;">
+                    <h3 style="color: #ccc; margin: 0;">Base de Datos Global de Usuarios</h3>
+                    <input type="text" id="searchAdminUsers" class="task-input" placeholder="🔍 Buscar usuario o HWID..." style="width: 250px; margin: 0; padding: 8px 15px; background: #111; font-size: 13px;">
+                </div>
+                <div class="users-table-container" style="width: 100%; max-width: 1100px; margin-bottom: 50px;">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Rol Sistema</th>
+                                <th>Organización Actual</th>
+                                <th style="text-align: right; padding-right: 25px;">Control Master</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminGlobalUsersBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-screen">
+        <nav>
+            <button id="btnBackSettings">← Volver</button>
+            <h2 style="color: var(--accent); margin: 0; font-size: 18px; margin-left: 20px;">Configuración</h2>
+        </nav>
+        <div class="settings-content">
+            <div class="settings-section-title">Cuenta</div>
+            <div class="setting-card">
+                <div class="setting-row">
+                     <div>
+                        <div class="setting-label">Cerrar Sesión</div>
+                        <div class="setting-desc">Desvincular este dispositivo y borrar licencia local.</div>
+                     </div>
+                     <button id="btnRemoveLicense">Salir</button>
+                </div>
+            </div>
+            <div class="settings-section-title">Personalización</div>
+            <div class="setting-card">
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-label">Color de App</div>
+                        <div class="setting-desc">Personaliza el color principal de la interfaz.</div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="hexInput" class="hex-input" placeholder="#00ff41">
+                        <button id="btnApplyColor">Aplicar</button>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-section-title">Sistema</div>
+            <div class="setting-card">
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-label" id="update-status-text">Actualizaciones</div>
+                        <div class="setting-desc">Busca la última versión disponible.</div>
+                    </div>
+                    <button id="btnCheckUpdates" style="background: var(--accent); color: black;">Buscar Actualización</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="license-status-tag" id="licenseStatus">
+        <span id="statusText">Conectado</span>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
