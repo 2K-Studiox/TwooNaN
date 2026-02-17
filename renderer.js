@@ -759,8 +759,16 @@ async function abrirArchivoNube(fileId) {
         if (data.success) {
             switchTab('editor');
             currentCloudFileId = fileId;
-            editor.innerText = data.content;
             
+            const modoActual = viewModeSelector ? viewModeSelector.value : 'doc';
+            
+            if (modoActual === 'code') {
+                editor.innerText = data.content;
+                aplicarResaltado();
+            } else {
+                editor.innerHTML = data.content;
+            }
+
             if (!lockData.success && lockData.lockedBy) {
                 alert(`⚠️ ARCHIVO BLOQUEADO por ${lockData.lockedBy}. Solo lectura.`);
                 editor.contentEditable = "false";
@@ -771,9 +779,13 @@ async function abrirArchivoNube(fileId) {
                 document.getElementById('btnSaveDirect').style.display = "block";
                 appTitle.innerText = `Twoo Projects - ${data.name} (Nube)`;
             }
-            cambiarVisualizacion(viewModeSelector.value);
+            
+            actualizarEstadoToolbar();
         }
-    } catch (e) { alert("Error de red"); }
+    } catch (e) { 
+        console.error(e);
+        alert("Error de red al abrir archivo"); 
+    }
     finally { document.body.style.cursor = 'default'; }
 }
 
