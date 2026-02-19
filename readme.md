@@ -35,10 +35,12 @@ Cualquier uso sin el consentimiento previo por escrito del equipo de Twoo Studio
 ## ✨ Características Principales
 
 * **Workstation para Staff:** Editor de texto avanzado con modos de visualización específicos para documentación y código.
-* **Gestión de Tareas (Kanban):** Flujo de trabajo optimizado con asignación múltiple de usuarios y muro de comentarios.
-* **Sincronización Cloud:** Acceso a archivos y tareas de la organización en tiempo real con sistema de bloqueo de archivos (Anti-Overwrite).
-* **Control Maestro de Admin:** Panel de auditoría global para dueños de empresas (ADMINAPP) con capacidad de inspección de archivos remotos.
-* **Seguridad por HWID:** Sistema de vinculación de dispositivos para asegurar que solo el personal autorizado acceda a la infraestructura.
+* **Gestión de Tareas (Kanban):** Flujo de trabajo optimizado con asignación múltiple de usuarios y muro de comentarios interactivo.
+* **Sincronización Cloud (Anti-Overwrite):** Acceso a archivos y tareas de la organización en tiempo real con sistema de bloqueo de archivos para evitar sobreescrituras simultáneas.
+* **Galería de Conceptos Privada:** Espacio dedicado ("Conceptos") para la subida y visualización de *concept arts*, bocetos y referencias visuales del proyecto, con visor de imágenes integrado (Lightbox).
+* **Gestión de Permisos Granular:** Control de acceso detallado por usuario (ej. permisos específicos para ver la galería de conceptos) gestionable directamente desde el panel de la organización.
+* **Control Maestro de Admin:** Panel de auditoría global para dueños de empresas (ADMINAPP) con capacidad de inspección de archivos remotos y gestión total de licencias y usuarios.
+* **Seguridad por HWID:** Sistema estricto de vinculación de hardware para asegurar que solo el personal autorizado acceda a la infraestructura desde dispositivos validados.
 
 ---
 
