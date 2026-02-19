@@ -99,13 +99,11 @@ nav {
     border-radius: 6px; 
 }
 
-/* Estilo especial para Admin */
 #tabAdminApp.active {
     color: gold;
     box-shadow: inset 0 -2px 0 gold;
 }
 
-/* --- ÁREA DE CONTENIDO (CON SCROLL) --- */
 .main-content-area {
     flex: 1; 
     overflow: hidden; 
@@ -116,7 +114,7 @@ nav {
 .tab-content { 
     height: 100%; 
     width: 100%; 
-    overflow-y: auto; /* PERMITE SCROLL VERTICAL */
+    overflow-y: auto;
     overflow-x: hidden;
     display: flex; 
     flex-direction: column; 
@@ -175,17 +173,106 @@ nav {
 }
 .task-list { flex: 1; overflow-y: auto; padding-top: 15px; }
 .task-card {
-    background: #252525; padding: 15px; margin-bottom: 10px; border-radius: 8px;
-    border-left: 4px solid #555; cursor: default; transition: 0.2s;
-    display: flex; justify-content: space-between; align-items: flex-start;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
-.task-card:hover { background: #2a2a2a; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-.task-actions { display: flex; gap: 5px; margin-left: 10px; }
-.task-btn {
-    font-size: 14px; padding: 4px; background: transparent; border: none; 
-    color: #555; cursor: pointer; transition: 0.2s;
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border-color: #444;
 }
-.task-btn:hover { color: var(--accent); transform: scale(1.2); }
+
+.task-header-title {
+    font-weight: 700;
+    color: white;
+    font-size: 14px;
+    margin-right: 20px;
+    line-height: 1.2;
+}
+
+.task-body-desc {
+    font-size: 12px;
+    color: #999;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.task-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.user-tag {
+    background: rgba(0, 255, 0, 0.1);
+    color: #ccc;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.task-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid #252525;
+}
+
+.task-action-btn {
+    background: transparent;
+    border: 1px solid #333;
+    color: #666;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    transition: 0.2s;
+}
+.task-action-btn:hover {
+    background: #333;
+    color: white;
+}
+
+.btn-delete-absolute {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: #ff0000;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+}
+
+.task-card:hover .btn-delete-absolute {
+    opacity: 1;
+}
+.btn-delete-absolute:hover {
+    color: #ff4b4b;
+}
 
 #gestion-container { 
     padding: 40px; 
@@ -480,7 +567,7 @@ nav {
     margin-top: 4px;
     padding-top: 4px;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
-    color: #00ff41; /* Color verde neón suave para resaltar que es reciente */
+    color: #00ff41;
     font-size: 0.85em;
     font-style: italic;
 }

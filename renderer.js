@@ -36,6 +36,12 @@ const formatButtons = document.querySelectorAll('.editor-toolbar button:not(#btn
 const tabAdminApp = document.getElementById('tabAdminApp');
 const adminContainer = document.getElementById('adminapp-container');
 
+const tabConceptos = document.getElementById('tabConceptos');
+const conceptosContainer = document.getElementById('conceptos-container');
+const conceptUploadInput = document.getElementById('conceptUploadInput');
+const btnUploadConcept = document.getElementById('btnUploadConcept');
+const conceptsGrid = document.getElementById('conceptsGrid');
+
 const API_URL = "https://twoo-api.vercel.app/api/verificar";
 
 let currentUserRole = null;
@@ -303,9 +309,11 @@ function iniciarDashboard(data) {
 
     if (tabAdminApp) tabAdminApp.style.display = 'none';
     if (tabGestion) tabGestion.style.display = 'none';
+    
+    if (tabConceptos) tabConceptos.style.display = 'none';
 
     if (currentUserRole === 'ORG_ADMIN' || currentUserRole === 'ADMINAPP') {
-        if (tabGestion) tabGestion.style.display = 'block';
+        if (tabGestion) tabGestion.style.display = 'inline-block';
         if (btnAddTask) btnAddTask.style.display = 'block';
         if (currentOrg && document.getElementById('inviteCodeDisplay')) {
             document.getElementById('inviteCodeDisplay').innerText = currentOrg.inviteCode;
@@ -319,7 +327,7 @@ function iniciarDashboard(data) {
             btnSuper.onclick = abrirPanelMaestroOrgs;
         }
         if (tabAdminApp) {
-            tabAdminApp.style.display = 'block';
+            tabAdminApp.style.display = 'inline-block';
         }
     }
 
@@ -600,6 +608,9 @@ window.switchTab = function (tabName) {
         if (tabBtns[2]) tabBtns[2].classList.add('active');
         const cont = document.getElementById('tasks-container');
         if (cont) cont.style.display = 'block';
+    } else if (tabName === 'conceptos') {
+        if (tabConceptos) tabConceptos.classList.add('active');
+        if (conceptosContainer) conceptosContainer.style.display = 'block';
     } else if (tabName === 'gestion') {
         const tabG = document.getElementById('tabGestion');
         if (tabG) tabG.classList.add('active');
@@ -618,10 +629,20 @@ async function cargarDatosRemotos() {
             body: JSON.stringify({ action: 'get_dashboard', hwid })
         });
         const data = await response.json();
-        if(data.role === 'ADMINAPP' && tabAdminApp) tabAdminApp.style.display = 'block';
+        if(data.role === 'ADMINAPP' && tabAdminApp) tabAdminApp.style.display = 'inline-block';
+
+        if (data.canViewConcepts || data.role === 'ORG_ADMIN' || data.role === 'ADMINAPP') {
+            if (tabConceptos) tabConceptos.style.display = 'inline-block';
+        } else {
+            if (tabConceptos) tabConceptos.style.display = 'none';
+            if (conceptosContainer && conceptosContainer.style.display === 'block') {
+                switchTab('editor');
+            }
+        }
 
         if (data.org && data.org.tasks) renderKanban(data.org.tasks);
         if (data.org && data.org.files) renderCloudFiles(data.org.files);
+        if (data.org && data.org.conceptos) renderConceptos(data.org.conceptos);
         if (data.users) renderUsersTable(data.users);
     } catch (e) { }
 }
@@ -682,6 +703,102 @@ if (fileUploadInput) {
         reader.readAsText(file);
     });
 }
+
+if (conceptUploadInput) {
+    conceptUploadInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const base64Image = event.target.result;
+            if (btnUploadConcept) {
+                btnUploadConcept.innerText = "Subiendo...";
+                btnUploadConcept.disabled = true;
+            }
+            try {
+                const hwid = await ipcRenderer.invoke('get-hwid');
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'upload_concept', hwid, fileName: file.name, content: base64Image })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    copyToClipboard(null, "🖼️ Concepto subido correctamente");
+                    cargarDatosRemotos();
+                } else {
+                    alert("Error al subir concepto: " + (data.error || "Desconocido"));
+                }
+            } catch (err) { alert("Error de conexión al subir la imagen"); }
+            finally {
+                if (btnUploadConcept) {
+                    btnUploadConcept.innerHTML = '<span style="font-size: 18px; margin-right: 8px;">🖼️</span> Subir Captura';
+                    btnUploadConcept.disabled = false;
+                }
+                conceptUploadInput.value = "";
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+window.abrirImagenModal = (src) => {
+    const modal = document.createElement('div');
+    modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999999; display:flex; justify-content:center; align-items:center; cursor:zoom-out; backdrop-filter: blur(5px); transition: opacity 0.2s;";
+    
+    modal.onclick = () => modal.remove();
+    
+    const img = document.createElement('img');
+    img.src = src;
+    img.style = "max-width:90%; max-height:90%; border-radius:10px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); object-fit:contain;";
+    
+    modal.appendChild(img);
+    document.body.appendChild(modal);
+};
+
+function renderConceptos(conceptos) {
+    if (!conceptsGrid) return;
+    conceptsGrid.innerHTML = "";
+
+    if (!conceptos || conceptos.length === 0) {
+        conceptsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #555; padding: 40px;">Aún no se han subido conceptos o diseños.</div>`;
+        return;
+    }
+
+    conceptos.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'concept-card';
+        
+        const btnBorrarHtml = (currentUserRole === 'ORG_ADMIN' || currentUserRole === 'ADMINAPP') 
+            ? `<button class="btn-table btn-kick" style="width: 100%; margin-top: 8px; font-size: 11px; height: auto; padding: 4px;" onclick="eliminarConcepto('${c._id}')">Eliminar</button>` 
+            : '';
+
+        card.innerHTML = `
+            <img src="${c.url || c.content}" alt="Concepto" style="cursor: zoom-in;" onclick="abrirImagenModal(this.src)">
+            <div class="concept-info">
+                <div class="concept-title" title="${c.name}">${c.name}</div>
+                ${btnBorrarHtml}
+            </div>
+        `;
+        conceptsGrid.appendChild(card);
+    });
+}
+
+window.eliminarConcepto = async (conceptoId) => {
+    if (!confirm("¿Seguro que deseas eliminar este diseño permanentemente?")) return;
+    try {
+        const hwid = await ipcRenderer.invoke('get-hwid');
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete_concept', hwid, conceptId: conceptoId })
+        });
+        const data = await response.json();
+        if (data.success) cargarDatosRemotos();
+    } catch (e) { alert("Error al eliminar concepto."); }
+};
+
 
 function renderCloudFiles(files) {
     if (!cloudFileList) return;
@@ -790,7 +907,12 @@ async function abrirArchivoNube(fileId) {
 }
 
 function renderKanban(tasks) {
-    const cols = { pending: document.getElementById('col-pending'), progress: document.getElementById('col-progress'), done: document.getElementById('col-done') };
+    const cols = { 
+        pending: document.getElementById('col-pending'), 
+        progress: document.getElementById('col-progress'), 
+        done: document.getElementById('col-done') 
+    };
+    
     if(!cols.pending) return;
     Object.values(cols).forEach(c => { if (c) c.innerHTML = ''; });
 
@@ -798,24 +920,68 @@ function renderKanban(tasks) {
         const div = document.createElement('div');
         div.className = 'task-card';
         
-        const asignadosHTML = (task.assignedTo || []).map(u => 
-            `<span style="background:var(--accent); color:black; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:bold; margin-right:4px;">${u}</span>`
-        ).join('');
+        const asignadosHTML = (task.assignedTo && task.assignedTo.length > 0) 
+            ? task.assignedTo.map(u => `<span class="user-tag">${u}</span>`).join('')
+            : '';
+
+        let moveButtons = '';
+        
+        if (task.status === 'pending') {
+            moveButtons = `
+                <button class="task-action-btn" title="Empezar" onclick="moveTask('${task._id}', 'progress')">▶</button>
+            `;
+        } else if (task.status === 'progress') {
+            moveButtons = `
+                <button class="task-action-btn" title="Devolver a Pendiente" onclick="moveTask('${task._id}', 'pending')">◀</button>
+                <button class="task-action-btn" title="Finalizar" style="color:var(--accent); border-color:var(--accent);" onclick="moveTask('${task._id}', 'done')">✔</button>
+            `;
+        } else if (task.status === 'done') {
+            moveButtons = `
+                <button class="task-action-btn" title="Reabrir" onclick="moveTask('${task._id}', 'progress')">◀</button>
+            `;
+        }
 
         div.innerHTML = `
-            <div style="font-weight:bold; color:white; margin-bottom:5px;">${task.title}</div>
-            <div style="font-size:11px; color:#888; margin-bottom:10px;">${task.description || 'Sin descripción'}</div>
-            <div style="margin-bottom:10px; display: flex; flex-wrap: wrap; gap: 2px;">${asignadosHTML}</div>
-            
-            <div style="border-top:1px solid #222; padding-top:10px; display:flex; gap:5px; align-items: center;">
-                <div style="flex:1"></div>
-                <button class="task-btn" onclick="moveTask('${task._id}', 'progress')">🚧</button>
-                <button class="task-btn" onclick="moveTask('${task._id}', 'done')">✅</button>
+            <button class="btn-delete-absolute" onclick="deleteTask('${task._id}')" title="Eliminar tarea">✕</button>
+
+            <div class="task-header-title">${task.title}</div>
+
+            <div class="task-body-desc" title="${task.description || ''}">
+                ${task.description || '<em style="opacity:0.5">Sin descripción</em>'}
+            </div>
+
+            <div class="task-tags">${asignadosHTML}</div>
+
+            <div class="task-footer">
+                ${moveButtons}
             </div>
         `;
+        
         if (cols[task.status]) cols[task.status].appendChild(div);
     });
 }
+
+window.deleteTask = async (taskId) => {
+    if (!confirm("¿Estás seguro de que quieres eliminar esta tarea permanentemente?")) return;
+
+    const hwid = await ipcRenderer.invoke('get-hwid');
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete_task', hwid, taskId })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            cargarDatosRemotos();
+        } else {
+            alert("Error al borrar: " + (data.error || "Desconocido"));
+        }
+    } catch (e) {
+        alert("Error de conexión al intentar borrar la tarea.");
+    }
+};
 
 window.moveTask = async (taskId, newStatus) => {
     const hwid = await ipcRenderer.invoke('get-hwid');
@@ -898,6 +1064,32 @@ if (btnCancelTask) {
     btnCancelTask.onclick = () => { taskModal.style.display = 'none'; };
 }
 
+window.togglePermisoConceptos = async (targetHwid, newValue) => {
+    try {
+        const hwid = await ipcRenderer.invoke('get-hwid');
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                action: 'toggle_concept_permission', 
+                hwid: hwid, 
+                targetHwid: targetHwid, 
+                canView: newValue 
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            copyToClipboard(null, "Permiso de Conceptos Actualizado");
+        } else {
+            alert("Error al cambiar permisos");
+            cargarDatosRemotos();
+        }
+    } catch (e) {
+        alert("Error de conexión.");
+        cargarDatosRemotos();
+    }
+};
+
 function renderUsersTable(users) {
     const tbody = document.getElementById('usersTableBody');
     const totalUsersEl = document.getElementById('stat-total-users');
@@ -907,20 +1099,33 @@ function renderUsersTable(users) {
     tbody.innerHTML = '';
     let onlineCount = 0;
     if (totalUsersEl) totalUsersEl.innerText = users.length;
+    
     users.forEach(u => {
         if (u.isOnline) onlineCount++;
         const roleClass = (u.role === 'ORG_ADMIN' || u.role === 'ADMINAPP') ? 'role-admin' : '';
         const initial = u.username ? u.username.charAt(0).toUpperCase() : '?';
         const isSelf = u.username === localStorage.getItem('username');
+        
+        let conceptColHtml = '';
+        const isAdminLogged = (currentUserRole === 'ORG_ADMIN' || currentUserRole === 'ADMINAPP');
+        
+        if (isAdminLogged && !isSelf && u.role !== 'ADMINAPP') {
+            conceptColHtml = `<input type="checkbox" class="checkbox-conceptos" onchange="togglePermisoConceptos('${u.hwid}', this.checked)" ${u.canViewConcepts ? 'checked' : ''}>`;
+        } else {
+            conceptColHtml = `<span style="color: ${u.canViewConcepts ? '#00ff41' : '#ff4b4b'};">${u.canViewConcepts ? '✅' : '❌'}</span>`;
+        }
+
         tbody.innerHTML += `
             <tr>
                 <td><div class="user-cell"><div class="user-avatar">${initial}</div><span style="font-weight: 600;">${u.username}</span></div></td>
                 <td><span class="role-badge ${roleClass}">${u.role}</span></td>
                 <td><span class="${u.isOnline ? 'badge-online' : 'badge-offline'}">${u.isOnline ? '● Online' : '○ Offline'}</span></td>
+                <td style="text-align: center; vertical-align: middle;">${conceptColHtml}</td>
                 <td><div class="action-buttons"><button class="btn-table btn-notify" onclick="notificarUsuario('${u.username}')">Notificar</button>${!isSelf ? `<button class="btn-table btn-kick" onclick="kickUser('${u.username}')">Kick</button>` : ''}</div></td>
             </tr>
         `;
     });
+    
     if (onlineUsersEl) onlineUsersEl.innerText = onlineCount;
     if (totalFilesEl && currentOrg && currentOrg.files) totalFilesEl.innerText = currentOrg.files.length;
 }
@@ -1196,13 +1401,4 @@ async function abrirPanelMaestroOrgs() {
             }
         }
     } catch (e) { alert("Error al cargar organizaciones globales."); }
-}
-
-function copyToClipboard(text, msg) {
-    if(text) navigator.clipboard.writeText(text);
-    const toast = document.createElement('div');
-    toast.innerText = msg;
-    toast.style = "position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--accent); color:black; padding:10px 20px; border-radius:8px; font-weight:bold; z-index:999999; box-shadow: 0 0 20px rgba(0,0,0,0.5);";
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2000);
 }

@@ -119,6 +119,55 @@
             scrollbar-width: thin;
             scrollbar-color: var(--accent) #111;
         }
+
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .concept-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+            cursor: pointer;
+        }
+
+        .concept-card:hover {
+            border-color: var(--accent);
+        }
+
+        .concept-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-bottom: 1px solid #333;
+            display: block;
+        }
+
+        .concept-info {
+            padding: 12px;
+            text-align: center;
+        }
+
+        .concept-title {
+            color: white;
+            font-size: 13px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .checkbox-conceptos {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -195,6 +244,9 @@
                     <button class="tab-btn active" onclick="switchTab('editor')">Editor</button>
                     <button class="tab-btn" onclick="switchTab('files')">Archivos</button>
                     <button class="tab-btn" onclick="switchTab('tasks')">Tareas</button>
+                    
+                    <button class="tab-btn" id="tabConceptos" onclick="switchTab('conceptos')" style="display: none;">Conceptos</button>
+                    
                     <button class="tab-btn" id="tabGestion" onclick="switchTab('gestion')" style="display: none;">Gestión</button>
                     <button class="tab-btn" id="tabAdminApp" onclick="switchTab('adminapp')" style="display: none; border: 1px solid gold; color: gold; font-weight: bold;">👑 Admin</button>
                 </div>
@@ -277,13 +329,29 @@
                 </div>
             </div>
 
+            <div id="conceptos-container" class="tab-content" style="display: none; padding: 40px; color: var(--text-main);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h2 style="color: var(--accent); margin: 0;">Concept Arts & Diseños</h2>
+                        <p style="color: #666; margin: 5px 0 0 0; font-size: 13px;">Galería de capturas y recursos visuales privados.</p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="file" id="conceptUploadInput" accept="image/png, image/jpeg, image/jpg" style="display: none;">
+                        <button id="btnUploadConcept" class="upload-btn" style="margin-right: 0;" onclick="document.getElementById('conceptUploadInput').click()">
+                            <span style="font-size: 18px; margin-right: 8px;">🖼️</span> Subir Captura
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="conceptsGrid" class="concept-grid">
+                    </div>
+            </div>
+
             <div id="gestion-container" class="tab-content" style="display: none;">
                 <div class="gestion-header">
                     <h2 style="margin: 0; font-size: 28px;">Panel de Gestión</h2>
                     <p style="color: #666; margin: 5px 0 0 0;">Administra tu organización: <span id="orgNameDisplayAdmin" style="color: var(--accent); font-weight: bold;">...</span></p>
                 </div>
-                <button id="btnSuperAdminOrgs" class="action-btn" style="display:none; margin-bottom:20px; background:white; color:black; border-radius:8px; width: fit-content; padding: 10px 25px; font-weight: 800;">
-                    ⚡ Seleccionar Organización
                 </button>
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -316,6 +384,7 @@
                                 <th>Usuario</th>
                                 <th>Rango / Rol</th>
                                 <th>Estado</th>
+                                <th style="text-align: center;">Ver Conceptos</th>
                                 <th style="text-align: right; padding-right: 25px;">Acciones</th>
                             </tr>
                         </thead>
