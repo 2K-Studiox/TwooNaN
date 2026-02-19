@@ -25,7 +25,7 @@ Al acceder a este repositorio, quedas sujeto a las siguientes cláusulas innegoc
 
 ## 📩 Contacto Corporativo y Autorizaciones
 
-La obtención de licencias (tipo `ADMINAPP`, `NEW_ORG_LICENSE` o `DEFAULT_LICENSE`) está estrictamente controlada. Si representas a una empresa de eventos, una comunidad o eres un desarrollador interesado en solicitar acceso a la red de **Twoo Projects**, debes establecer contacto oficial:
+La obtención de licencias (tipo `TWOOSTUDIO`, `NEW_ORG_LICENSE` o `DEFAULT_LICENSE`) está estrictamente controlada. Si representas a una empresa de eventos, una comunidad o eres un desarrollador interesado en solicitar acceso a la red de **Twoo Projects**, debes establecer contacto oficial:
 
 * **Organización:** Twoo Studio Company
 * **Email Legal y de Soporte:** elfo2k@outlook.es
