@@ -1,9 +1,9 @@
 {
   "name": "twoo-projects",
-  "version": "0.1.3",
+  "version": "0.1.10",
   "description": "Aplicacion para facilitar el trabajo en equipo.",
   "main": "main.js",
-  "author": "Twoo Studio Company",
+  "author": "ElFo2K - Twoo",
   "scripts": {
     "start": "electron .",
     "package": "electron-forge package",
@@ -56,7 +56,7 @@
   "build": {
     "appId": "com.twoostudio.projects",
     "productName": "Twoo Projects",
-    "copyright": "Copyright © 2026 Twoo Studio",
+    "copyright": "Copyright © 2026 ElFo2K Twoo",
     "publish": [
       {
         "provider": "github",

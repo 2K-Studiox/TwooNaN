@@ -59,6 +59,7 @@ let cacheAdminOrgs = [];
 
 let viendoPapelera = false;
 let lastAnnId = null;
+
 const alertSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
 initApp();
@@ -67,12 +68,47 @@ function initApp() {
     aplicarColor(customColor);
     if (viewModeSelector) actualizarEstadoToolbar();
 
+    setupDragAndDrop();
+
     const storedUsername = localStorage.getItem('username');
     if (!storedUsername) {
         showScreen('username');
     } else {
         checkSession(storedUsername);
     }
+}
+
+function setupDragAndDrop() {
+    const dropZones = [
+        { id: 'col-pending', status: 'pending' },
+        { id: 'col-progress', status: 'progress' },
+        { id: 'col-done', status: 'done' }
+    ];
+
+    dropZones.forEach(zone => {
+        const el = document.getElementById(zone.id);
+        if (!el) return;
+        
+        const colContainer = el.parentElement; 
+        
+        colContainer.addEventListener('dragover', (e) => {
+            e.preventDefault(); 
+            colContainer.style.background = 'rgba(255,255,255,0.03)';
+        });
+
+        colContainer.addEventListener('dragleave', (e) => {
+            colContainer.style.background = 'transparent';
+        });
+
+        colContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            colContainer.style.background = 'transparent';
+            const taskId = e.dataTransfer.getData('text/plain');
+            if (taskId) {
+                moveTask(taskId, zone.status);
+            }
+        });
+    });
 }
 
 function showScreen(screenName) {
@@ -90,12 +126,31 @@ function showScreen(screenName) {
         welcomeScreen.style.display = 'block';
         ipcRenderer.send('set-menubar', true);
         if (!refreshInterval) {
-            refreshInterval = setInterval(cargarDatosRemotos, 30000);
+            refreshInterval = setInterval(cargarDatosRemotos, 30000); 
         }
         startHeartbeat();
     }
     if (screenName === 'settings') settingsScreen.style.display = 'flex';
 }
+
+window.mostrarNotificacion = (msg) => {
+    const toast = document.createElement('div');
+    toast.innerHTML = `
+        <div style="display:flex; align-items:start; gap:12px; padding-right: 25px;">
+            <span style="font-size:26px;">🔔</span>
+            <div>
+                <strong style="display:block; font-size:14px; margin-bottom:4px; color: var(--accent);">Mensaje de Equipo</strong>
+                <span style="font-size:13px; font-weight:normal; color:#e0e0e0; line-height: 1.4;">${msg}</span>
+            </div>
+        </div>
+        <button onclick="this.parentElement.remove()" style="position:absolute; top:10px; right:10px; background:transparent; border:none; color:#888; cursor:pointer; font-size:14px; transition: 0.2s;">✕</button>
+    `;
+    toast.style = "position:fixed; bottom:20px; right:20px; background:#1a1a1a; border: 1px solid #333; border-left: 4px solid var(--accent); padding:15px; border-radius:8px; z-index:999999; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 320px; word-wrap: break-word;";
+    document.body.appendChild(toast);
+    
+    alertSound.play().catch(e => console.log("Sonido bloqueado"));
+};
+
 
 function startHeartbeat() {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -122,8 +177,9 @@ function startHeartbeat() {
                     body: JSON.stringify({ action: 'check_notifications', hwid })
                 });
                 const dataNote = await resNote.json();
+                
                 dataNote.notifications.forEach(msg => {
-                    new Notification('Twoo Projects', { body: msg });
+                    mostrarNotificacion(msg);
                 });
             }
 
@@ -149,29 +205,65 @@ window.closeAnnouncement = () => {
     if (banner) banner.style.display = 'none';
 };
 
-window.notificarUsuario = async (targetUsername) => {
-    const msg = prompt(`Escribe el mensaje para ${targetUsername}:`);
-    if (!msg) return;
+window.notificarUsuario = (targetUsername) => {
+    if (document.getElementById('custom-prompt-overlay')) return;
 
-    try {
-        const hwid = await ipcRenderer.invoke('get-hwid');
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'send_notification',
-                hwid: hwid,
-                targetUser: targetUsername,
-                message: msg
-            })
-        });
-        const data = await response.json();
-        if (data.success) {
-            alert("Notificación enviada correctamente.");
+    const overlay = document.createElement('div');
+    overlay.id = "custom-prompt-overlay";
+    overlay.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999999; display:flex; justify-content:center; align-items:center; backdrop-filter: blur(5px);";
+    
+    overlay.innerHTML = `
+        <div style="background:#18181b; padding:30px; border-radius:12px; border:1px solid #333; width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.9);">
+            <h3 style="margin-top:0; color:var(--accent); font-size:18px;">Enviar Notificación</h3>
+            <p style="color:#aaa; font-size:13px;">Mensaje directo para: <b style="color:white;">${targetUsername}</b></p>
+            <textarea id="custom-prompt-input" style="width:100%; height:80px; background:#0f0f0f; border:1px solid #444; color:white; padding:12px; border-radius:6px; margin-top:15px; resize:none; outline:none; font-family: inherit; font-size:14px;" placeholder="Escribe tu mensaje aquí..."></textarea>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button id="custom-prompt-cancel" style="background:transparent; border:1px solid #444; color:#ccc; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:600 transition:0.2s;">Cancelar</button>
+                <button id="custom-prompt-send" style="background:var(--accent); color:black; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:bold; transition:0.2s;">Enviar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('custom-prompt-input').focus();
+
+    document.getElementById('custom-prompt-cancel').onclick = () => overlay.remove();
+    
+    document.getElementById('custom-prompt-send').onclick = async () => {
+        const msg = document.getElementById('custom-prompt-input').value.trim();
+        if (!msg) return;
+        
+        const btn = document.getElementById('custom-prompt-send');
+        btn.innerText = "Enviando...";
+        btn.disabled = true;
+
+        try {
+            const hwid = await ipcRenderer.invoke('get-hwid');
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'send_notification',
+                    hwid: hwid,
+                    targetUser: targetUsername,
+                    message: msg
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                overlay.remove();
+                copyToClipboard(null, "📧 Mensaje enviado correctamente");
+            } else {
+                alert("Error al enviar notificación.");
+                btn.innerText = "Enviar";
+                btn.disabled = false;
+            }
+        } catch (e) {
+            alert("Error de conexión al enviar.");
+            btn.innerText = "Enviar";
+            btn.disabled = false;
         }
-    } catch (e) {
-        alert("Error al enviar notificación.");
-    }
+    };
 };
 
 if (btnSetUsername) {
@@ -212,7 +304,7 @@ async function checkSession(username) {
         showScreen('dashboard');
         document.getElementById('userInfoDisplay').innerText = `${username} (Offline)`;
         const savedRole = localStorage.getItem('userRole');
-        if(savedRole === 'ADMINAPP' && tabAdminApp) tabAdminApp.style.display = 'block';
+        if(savedRole === 'TWOOSTUDIO' && tabAdminApp) tabAdminApp.style.display = 'block';
     }
 }
 
@@ -309,10 +401,9 @@ function iniciarDashboard(data) {
 
     if (tabAdminApp) tabAdminApp.style.display = 'none';
     if (tabGestion) tabGestion.style.display = 'none';
-    
     if (tabConceptos) tabConceptos.style.display = 'none';
 
-    if (currentUserRole === 'ORG_ADMIN' || currentUserRole === 'ADMINAPP') {
+    if (currentUserRole === 'ORG_ADMIN' || currentUserRole === 'TWOOSTUDIO') {
         if (tabGestion) tabGestion.style.display = 'inline-block';
         if (btnAddTask) btnAddTask.style.display = 'block';
         if (currentOrg && document.getElementById('inviteCodeDisplay')) {
@@ -321,7 +412,7 @@ function iniciarDashboard(data) {
         }
     }
 
-    if (currentUserRole === 'ADMINAPP') {
+    if (currentUserRole === 'TWOOSTUDIO') {
         if (btnSuper) {
             btnSuper.style.display = 'block';
             btnSuper.onclick = abrirPanelMaestroOrgs;
@@ -377,7 +468,7 @@ function renderAdminUserTable(usersList) {
                     </div>
                 </div>
             </td>
-            <td><span class="role-badge ${u.role === 'ADMINAPP' ? 'role-admin' : ''}">${u.role}</span></td>
+            <td><span class="role-badge ${u.role === 'TWOOSTUDIO' ? 'role-admin' : ''}">${u.role}</span></td>
             <td>
                 <select class="task-input" style="margin:0; padding:5px; font-size:12px; width:160px; background:#111; color:white; border-radius:4px;" 
                         onchange="adminMoverUsuario('${u.hwid}', this.value)">
@@ -629,9 +720,10 @@ async function cargarDatosRemotos() {
             body: JSON.stringify({ action: 'get_dashboard', hwid })
         });
         const data = await response.json();
-        if(data.role === 'ADMINAPP' && tabAdminApp) tabAdminApp.style.display = 'inline-block';
+        
+        if(data.role === 'TWOOSTUDIO' && tabAdminApp) tabAdminApp.style.display = 'inline-block';
 
-        if (data.canViewConcepts || data.role === 'ORG_ADMIN' || data.role === 'ADMINAPP') {
+        if (data.canViewConcepts || data.role === 'ORG_ADMIN' || data.role === 'TWOOSTUDIO') {
             if (tabConceptos) tabConceptos.style.display = 'inline-block';
         } else {
             if (tabConceptos) tabConceptos.style.display = 'none';
@@ -640,9 +732,12 @@ async function cargarDatosRemotos() {
             }
         }
 
-        if (data.org && data.org.tasks) renderKanban(data.org.tasks);
-        if (data.org && data.org.files) renderCloudFiles(data.org.files);
-        if (data.org && data.org.conceptos) renderConceptos(data.org.conceptos);
+        if (data.org) {
+            currentOrg = data.org; 
+            if (currentOrg.tasks) renderKanban(currentOrg.tasks);
+            if (currentOrg.files) renderCloudFiles(currentOrg.files);
+            if (currentOrg.conceptos) renderConceptos(currentOrg.conceptos);
+        }
         if (data.users) renderUsersTable(data.users);
     } catch (e) { }
 }
@@ -746,13 +841,10 @@ if (conceptUploadInput) {
 window.abrirImagenModal = (src) => {
     const modal = document.createElement('div');
     modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999999; display:flex; justify-content:center; align-items:center; cursor:zoom-out; backdrop-filter: blur(5px); transition: opacity 0.2s;";
-    
     modal.onclick = () => modal.remove();
-    
     const img = document.createElement('img');
     img.src = src;
     img.style = "max-width:90%; max-height:90%; border-radius:10px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); object-fit:contain;";
-    
     modal.appendChild(img);
     document.body.appendChild(modal);
 };
@@ -770,7 +862,7 @@ function renderConceptos(conceptos) {
         const card = document.createElement('div');
         card.className = 'concept-card';
         
-        const btnBorrarHtml = (currentUserRole === 'ORG_ADMIN' || currentUserRole === 'ADMINAPP') 
+        const btnBorrarHtml = (currentUserRole === 'ORG_ADMIN' || currentUserRole === 'TWOOSTUDIO') 
             ? `<button class="btn-table btn-kick" style="width: 100%; margin-top: 8px; font-size: 11px; height: auto; padding: 4px;" onclick="eliminarConcepto('${c._id}')">Eliminar</button>` 
             : '';
 
@@ -920,6 +1012,15 @@ function renderKanban(tasks) {
         const div = document.createElement('div');
         div.className = 'task-card';
         
+        div.draggable = true;
+        div.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', task._id);
+            setTimeout(() => div.style.opacity = '0.4', 0); 
+        });
+        div.addEventListener('dragend', (e) => {
+            div.style.opacity = '1'; 
+        });
+        
         const asignadosHTML = (task.assignedTo && task.assignedTo.length > 0) 
             ? task.assignedTo.map(u => `<span class="user-tag">${u}</span>`).join('')
             : '';
@@ -944,7 +1045,7 @@ function renderKanban(tasks) {
         div.innerHTML = `
             <button class="btn-delete-absolute" onclick="deleteTask('${task._id}')" title="Eliminar tarea">✕</button>
 
-            <div class="task-header-title">${task.title}</div>
+            <div class="task-header-title" style="cursor: grab;">${task.title}</div>
 
             <div class="task-body-desc" title="${task.description || ''}">
                 ${task.description || '<em style="opacity:0.5">Sin descripción</em>'}
@@ -984,13 +1085,23 @@ window.deleteTask = async (taskId) => {
 };
 
 window.moveTask = async (taskId, newStatus) => {
+    if (currentOrg && currentOrg.tasks) {
+        const taskIndex = currentOrg.tasks.findIndex(t => t._id.toString() === taskId);
+        if (taskIndex !== -1 && currentOrg.tasks[taskIndex].status !== newStatus) {
+            currentOrg.tasks[taskIndex].status = newStatus;
+            renderKanban(currentOrg.tasks); 
+        }
+    }
+
     const hwid = await ipcRenderer.invoke('get-hwid');
-    await fetch(API_URL, {
+    fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update_task', hwid, taskId, newStatus })
+    }).catch(err => {
+        console.error("Error moviendo tarea en la DB", err);
+        cargarDatosRemotos();
     });
-    cargarDatosRemotos();
 }
 
 window.abrirMuroComentarios = async (taskId) => {
@@ -1102,14 +1213,14 @@ function renderUsersTable(users) {
     
     users.forEach(u => {
         if (u.isOnline) onlineCount++;
-        const roleClass = (u.role === 'ORG_ADMIN' || u.role === 'ADMINAPP') ? 'role-admin' : '';
+        const roleClass = (u.role === 'ORG_ADMIN' || u.role === 'TWOOSTUDIO') ? 'role-admin' : '';
         const initial = u.username ? u.username.charAt(0).toUpperCase() : '?';
         const isSelf = u.username === localStorage.getItem('username');
         
         let conceptColHtml = '';
-        const isAdminLogged = (currentUserRole === 'ORG_ADMIN' || currentUserRole === 'ADMINAPP');
+        const isAdminLogged = (currentUserRole === 'ORG_ADMIN' || currentUserRole === 'TWOOSTUDIO');
         
-        if (isAdminLogged && !isSelf && u.role !== 'ADMINAPP') {
+        if (isAdminLogged && !isSelf && u.role !== 'TWOOSTUDIO') {
             conceptColHtml = `<input type="checkbox" class="checkbox-conceptos" onchange="togglePermisoConceptos('${u.hwid}', this.checked)" ${u.canViewConcepts ? 'checked' : ''}>`;
         } else {
             conceptColHtml = `<span style="color: ${u.canViewConcepts ? '#00ff41' : '#ff4b4b'};">${u.canViewConcepts ? '✅' : '❌'}</span>`;
